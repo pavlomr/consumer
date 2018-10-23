@@ -1,0 +1,37 @@
+{
+  "authors": [
+    {
+      "homepage": "https://plus.google.com/+PavloMarenyuk",
+      "email": "pavlomr@gmail.com",
+      "name": "Pavlo Marenyuk",
+      "role": "Author"
+    }
+  ],
+  "require": {
+    "ext-json": "*",
+    "php": "^7.1",
+    "ext-curl": "*",
+    "psr/log": "^1.0",
+    "guzzlehttp/guzzle": "^6.3"
+  },
+  "name": "pavlomr/consumer",
+  "description": "Service consumer",
+  "license": "MIT",
+  "prefer-stable": true,
+  "autoload": {
+    "psr-0": {},
+    "psr-4": {
+      "pavlomr\\Service\\": "src/"
+    }
+  },
+  "type": "library",
+  "config": {
+    "disable-tls": false,
+    "vendor-dir": "lib",
+    "optimize-autoloader": true,
+    "archive-dir": "archive",
+    "preferred-install": "dist",
+    "secure-http": true
+  },
+  "minimum-stability": "dev"
+}
