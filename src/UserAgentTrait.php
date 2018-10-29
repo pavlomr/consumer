@@ -8,18 +8,6 @@ use ReflectionClass;
 trait UserAgentTrait
 {
     /**
-     * @return array
-     */
-    protected static function __config(): array
-    {
-        return [
-            'major' => 'major',
-            'minor' => 'minor',
-            'app'   => pathinfo($_SERVER['SCRIPT_NAME'], PATHINFO_BASENAME),
-        ];
-    }
-
-    /**
      * @param string $internal
      * @return string
      */
@@ -28,15 +16,15 @@ trait UserAgentTrait
         /** @var string $userAgent */
         static $userAgent = null;
         if (!$userAgent) {
-            /** @var array $parents */
-            $parents = [];
+            /** @var array $parentsChain */
+            $parentsChain = [];
             try {
                 /** @var ReflectionClass $reflection */
                 $parent          = $reflection = new ReflectionClass(static::class);
                 $callerClass     = $reflection->getShortName();
                 $callerNamespace = $reflection->getNamespaceName();
                 while ($parent = $parent->getParentClass()) {
-                    $parents[] = $parent->getShortName();
+                    $parentsChain[] = $parent->getShortName();
                 }
             } catch (Exception $exception) {
                 $callerClass     = $callerClass ?? 'UnknownCaller';
@@ -46,11 +34,11 @@ trait UserAgentTrait
                 '%s/%s/%s-%s (%s) %s %s',
                 explode('\\', $callerNamespace)[0],
                 $callerClass,
-                static::__config()['major'],
-                static::__config()['minor'],
-                static::__config()['app'],
-                join(' ', $parents),
-                $this->__exposeInternals() ? $internal : ''
+                $this->__callerVersionMajor(),
+                $this->__callerVersionMinor(),
+                $this->__callerApplication(),
+                join(' ', $parentsChain),
+                $this->__callerExposeInternals() ? $internal : ''
             ));
         }
 
@@ -58,10 +46,35 @@ trait UserAgentTrait
     }
 
     /**
+     * Does decorator exposes internals
      * @return bool
      */
-    protected function __exposeInternals(): bool
+    protected function __callerExposeInternals(): bool
     {
         return defined('static::EXPOSE_INTERNALS') ? constant('static::EXPOSE_INTERNALS') : true;
+    }
+
+    /**
+     * @return string
+     */
+    protected function __callerVersionMajor(): string
+    {
+        return '';
+    }
+
+    /**
+     * @return string
+     */
+    protected function __callerVersionMinor(): string
+    {
+        return '';
+    }
+
+    /**
+     * @return string
+     */
+    protected function __callerApplication(): string
+    {
+        return pathinfo($_SERVER['SCRIPT_NAME'], PATHINFO_BASENAME);
     }
 }
