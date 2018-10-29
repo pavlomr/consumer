@@ -235,11 +235,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      * @param array $data
      * @return string
      */
-    protected function actionUri(string $function, $data = []): string
+    protected function actionUri(string $function): string
     {
         return uri_template(
             $this->getPath(),
-            array_merge(['token' => $this->getAuth(), 'command' => $function], $data)
+            ['token' => $this->getAuth()['token'], 'command' => $function]
         );
     }
 
@@ -285,7 +285,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                 ->getClient()
                 ->request(
                     $this->getMethod(),
-                    $this->actionUri($action, $data),
+                    $this->actionUri($action),
                     [
                         RequestOptions::HEADERS => $this->getHeaders(),
                         $this->dataIndex()      => $data,
