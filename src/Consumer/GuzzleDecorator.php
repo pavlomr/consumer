@@ -21,7 +21,6 @@ use Psr\Log\NullLogger;
 use function GuzzleHttp\default_user_agent;
 use function GuzzleHttp\json_decode;
 use function GuzzleHttp\Promise\rejection_for;
-use function GuzzleHttp\Psr7\str;
 use function GuzzleHttp\Psr7\stream_for;
 use function GuzzleHttp\uri_template;
 
@@ -80,14 +79,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
-     * @return array
-     */
-    protected function getHeaders(): array
-    {
-        return $this->headers;
-    }
-
-    /**
      * @return string[]
      */
     public function getAuth(): array
@@ -128,6 +119,26 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
+     * @return string
+     */
+    public function getPath(): string
+    {
+        return $this->path;
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return DecoratorInterface
+     */
+    public function setPath(string $path): DecoratorInterface
+    {
+        $this->path = $path;
+
+        return $this;
+    }
+
+    /**
      * @param string $name
      * @param array  $arguments
      *
@@ -139,6 +150,14 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         return substr($name, -5) === 'Async'
             ? $this->__callAsync(substr($name, 0, -5), $arguments[0])
             : $this->__callSync($name, $arguments[0]);
+    }
+
+    /**
+     * @return array
+     */
+    protected function getHeaders(): array
+    {
+        return $this->headers;
     }
 
     protected function __callAsync(string $action, $data)
@@ -231,26 +250,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
             $this->getPath(),
             ['token' => $this->getAuth()['token'], 'command' => $function]
         );
-    }
-
-    /**
-     * @return string
-     */
-    public function getPath(): string
-    {
-        return $this->path;
-    }
-
-    /**
-     * @param string $path
-     *
-     * @return DecoratorInterface
-     */
-    public function setPath(string $path): DecoratorInterface
-    {
-        $this->path = $path;
-
-        return $this;
     }
 
     protected function dataIndex()

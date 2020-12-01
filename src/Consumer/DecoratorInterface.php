@@ -4,8 +4,6 @@ namespace pavlomr\Service\Consumer;
 
 interface DecoratorInterface
 {
-    public const   VERSION = '1.2.1';
-
     /**
      * @return string[]
      */
