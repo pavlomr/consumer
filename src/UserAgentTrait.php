@@ -17,10 +17,8 @@ trait UserAgentTrait
         /** @var string $userAgent */
         static $userAgent = null;
         if (!$userAgent) {
-            /** @var array $parentsChain */
             $parentsChain = [];
             try {
-                /** @var ReflectionClass $reflection */
                 $parent          = $reflection = new ReflectionClass(static::class);
                 $callerClass     = $reflection->getShortName();
                 $callerNamespace = $reflection->getNamespaceName();
@@ -36,11 +34,11 @@ trait UserAgentTrait
                     '%s/%s/%s-%s (%s) %s %s',
                     explode('\\', $callerNamespace)[0],
                     $callerClass,
-                    $this->__callerVersionMajor(),
-                    $this->__callerVersionMinor(),
-                    $this->__callerApplication(),
-                    join(' ', $parentsChain),
-                    $this->__callerExposeInternals() ? $internal : ''
+                    $this->_callerVersionMajor(),
+                    $this->_callerVersionMinor(),
+                    $this->_callerApplication(),
+                    implode(' ', $parentsChain),
+                    $this->_callerExposeInternals() ? $internal : ''
                 )
             );
         }
@@ -51,23 +49,23 @@ trait UserAgentTrait
     /**
      * @return string
      */
-    protected function __callerVersionMajor(): string
+    protected function _callerVersionMajor(): string
     {
-        return '';
+        return 'dev';
     }
 
     /**
      * @return string
      */
-    protected function __callerVersionMinor(): string
+    protected function _callerVersionMinor(): string
     {
-        return '';
+        return '*';
     }
 
     /**
      * @return string
      */
-    protected function __callerApplication(): string
+    protected function _callerApplication(): string
     {
         return pathinfo($_SERVER['SCRIPT_NAME'], PATHINFO_BASENAME);
     }
@@ -76,7 +74,7 @@ trait UserAgentTrait
      * Does decorator exposes internals
      * @return bool
      */
-    protected function __callerExposeInternals(): bool
+    protected function _callerExposeInternals(): bool
     {
         return defined('static::EXPOSE_INTERNALS') ? constant('static::EXPOSE_INTERNALS') : true;
     }

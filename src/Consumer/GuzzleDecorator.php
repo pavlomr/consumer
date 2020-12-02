@@ -7,6 +7,7 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\RequestOptions;
 use InvalidArgumentException;
@@ -20,8 +21,6 @@ use Psr\Log\NullLogger;
 
 use function GuzzleHttp\default_user_agent;
 use function GuzzleHttp\json_decode;
-use function GuzzleHttp\Promise\rejection_for;
-use function GuzzleHttp\Psr7\stream_for;
 use function GuzzleHttp\uri_template;
 
 /**
@@ -35,18 +34,12 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     use UserAgentTrait;
 
     protected const ACCEPT_CONTENT = 'application/json';
-    /** @var string */
-    protected $path;
-    /** @var string */
-    protected $method = 'post';
-    /** @var string[] */
-    private $auth = [];
-    /** @var  ClientInterface */
-    private $client;
-    /** @var string */
-    private $base;
-    /** @var array */
-    private $headers = [];
+    protected string        $path;
+    protected string        $method  = 'post';
+    private array           $auth    = [];
+    private ClientInterface $client;
+    private string          $base;
+    private array           $headers = [];
 
     /**
      * Api constructor.
@@ -148,8 +141,8 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     public function __call(string $name, array $arguments)
     {
         return substr($name, -5) === 'Async'
-            ? $this->__callAsync(substr($name, 0, -5), $arguments[0])
-            : $this->__callSync($name, $arguments[0]);
+            ? $this->_callAsync(substr($name, 0, -5), $arguments[0])
+            : $this->_callSync($name, $arguments[0]);
     }
 
     /**
@@ -160,7 +153,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         return $this->headers;
     }
 
-    protected function __callAsync(string $action, $data)
+    protected function _callAsync(string $action, $data): PromiseInterface
     {
         return $this
             ->getClient()
@@ -178,13 +171,13 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                         /** @var ResponseInterface $response */
                         $response = $exception->getResponse();
                         if (false === strpos($response->getHeader('Content-Type')[0], $this::ACCEPT_CONTENT)) {
-                            return rejection_for(stream_for($response->getReasonPhrase()));
+                            return Create::rejectionFor($response->getReasonPhrase());
                         }
 
-                        return rejection_for($response->getBody());
+                        return Create::rejectionFor($response->getBody());
                     }
 
-                    return rejection_for(stream_for($exception->getMessage()));
+                    return Create::rejectionFor($exception->getMessage());
                 }
             )
             ->then(
@@ -192,10 +185,34 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                     return $this->parseStream($data);
                 },
                 function (StreamInterface $data) {
-                    return rejection_for($this->parseStream($data));
+                    return Create::rejectionFor($this->parseStream($data));
                 }
             )
             ;
+    }
+
+    /**
+     * @param string $action
+     * @param        $data
+     *
+     * @return StreamInterface
+     * @throws GuzzleException
+     */
+    protected function _callSync(string $action, $data): StreamInterface
+    {
+        return $this->parseStream(
+            $this
+                ->getClient()
+                ->request(
+                    $this->getMethod(),
+                    $this->actionUri($action),
+                    [
+                        RequestOptions::HEADERS => $this->getHeaders(),
+                        $this->dataIndex()      => $data,
+                    ]
+                )
+                ->getBody()
+        );
     }
 
     /**
@@ -240,7 +257,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
     /**
      * @param string $function
-     * @param array  $data
      *
      * @return string
      */
@@ -252,7 +268,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         );
     }
 
-    protected function dataIndex()
+    protected function dataIndex(): string
     {
         return $this->getMethod() === 'get' ? RequestOptions::QUERY : RequestOptions::JSON;
     }
@@ -270,7 +286,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
             return json_decode($stream);
         } catch (InvalidArgumentException $exception) {
             return new class($stream) {
-                public $message;
+                public string $message;
 
                 public function __construct(StreamInterface $stream)
                 {
@@ -279,30 +295,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                 }
             };
         }
-    }
-
-    /**
-     * @param string $action
-     * @param        $data
-     *
-     * @return StreamInterface
-     * @throws GuzzleException
-     */
-    protected function __callSync(string $action, $data)
-    {
-        return $this->parseStream(
-            $this
-                ->getClient()
-                ->request(
-                    $this->getMethod(),
-                    $this->actionUri($action),
-                    [
-                        RequestOptions::HEADERS => $this->getHeaders(),
-                        $this->dataIndex()      => $data,
-                    ]
-                )
-                ->getBody()
-        );
     }
 
     /**
