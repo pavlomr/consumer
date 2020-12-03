@@ -159,7 +159,10 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
             ->requestAsync(
                 $this->getMethod(),
                 $this->actionUri($action),
-                [$this->dataIndex() => $data]
+                [
+                    RequestOptions::HEADERS => $this->getHeaders(),
+                    $this->dataIndex()      => $data,
+                ]
             )
             ->then(
                 function (ResponseInterface $response) {
