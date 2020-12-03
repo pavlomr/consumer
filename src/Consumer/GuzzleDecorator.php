@@ -10,6 +10,8 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\RequestOptions;
+use GuzzleHttp\UriTemplate\UriTemplate;
+use GuzzleHttp\Utils;
 use InvalidArgumentException;
 use pavlomr\Service\SingletonTrait;
 use pavlomr\Service\UserAgentTrait;
@@ -18,10 +20,6 @@ use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
-
-use function GuzzleHttp\default_user_agent;
-use function GuzzleHttp\json_decode;
-use function GuzzleHttp\uri_template;
 
 /**
  * Class GuzzleDecorator
@@ -34,6 +32,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     use UserAgentTrait;
 
     protected const ACCEPT_CONTENT = 'application/json';
+
     protected string        $path;
     protected string        $method  = 'post';
     private array           $auth    = [];
@@ -54,7 +53,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
             RequestOptions::DECODE_CONTENT => 'gzip',
             RequestOptions::HEADERS        => [
                     'Accept'     => static::ACCEPT_CONTENT,
-                    'User-Agent' => $this->userAgent(default_user_agent()),
+                    'User-Agent' => $this->userAgent(Utils::defaultUserAgent()),
                 ] + $this->getHeaders(),
             RequestOptions::AUTH           => $this->getAuth(),
             RequestOptions::COOKIES        => true,
@@ -262,7 +261,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      */
     protected function actionUri(string $function): string
     {
-        return uri_template(
+        return UriTemplate::expand(
             $this->getPath(),
             ['token' => $this->getAuth()['token'], 'command' => $function]
         );
@@ -283,7 +282,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         try {
             $stream->rewind();
 
-            return json_decode($stream);
+            return Utils::jsonDecode($stream);
         } catch (InvalidArgumentException $exception) {
             return new class($stream) {
                 public string $message;

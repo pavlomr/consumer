@@ -51,7 +51,7 @@ trait UserAgentTrait
      */
     protected function _callerVersionMajor(): string
     {
-        return 'dev';
+        return $_SERVER['TIER'] ?? 'dev';
     }
 
     /**
@@ -59,7 +59,7 @@ trait UserAgentTrait
      */
     protected function _callerVersionMinor(): string
     {
-        return '*';
+        return $_SERVER['TAG'] ?? '*';
     }
 
     /**

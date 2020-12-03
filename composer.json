@@ -12,9 +12,10 @@
     "ext-json": "*",
     "ext-curl": "*",
     "psr/log": "^1.0",
-    "guzzlehttp/guzzle": "^7.0.0",
+    "guzzlehttp/guzzle": "^7.0",
     "psr/http-message": "^1.0",
-    "psr/http-client": "^1.0"
+    "psr/http-client": "^1.0",
+    "guzzlehttp/uri-template": "^0.2.0"
   },
   "name": "pavlomr/consumer",
   "description": "Service consumer",
@@ -28,7 +29,6 @@
   "type": "library",
   "config": {
     "disable-tls": false,
-    "vendor-dir": "lib",
     "optimize-autoloader": true,
     "archive-dir": "archive",
     "preferred-install": "dist",
