@@ -21,6 +21,7 @@ use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
+use stdClass;
 
 /**
  * Class GuzzleDecorator
@@ -170,8 +171,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                     return $response->getBody();
                 },
                 function (RequestException $exception) {
-                    error_log("Guzzle:");
-                    error_log(var_export($exception, 1));
                     if ($exception->hasResponse()) {
                         /** @var ResponseInterface $response */
                         $response = $exception->getResponse();
@@ -290,7 +289,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
             return GuzzleUtils::jsonDecode($stream);
         } catch (InvalidArgumentException $exception) {
-            return new class($stream) {
+            return new class($stream) extends stdClass {
                 public string $message;
 
                 public function __construct(StreamInterface $stream)
