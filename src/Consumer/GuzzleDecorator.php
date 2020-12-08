@@ -9,9 +9,10 @@ use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Psr7\Utils as GuzzlePSR7Utils;
 use GuzzleHttp\RequestOptions;
 use GuzzleHttp\UriTemplate\UriTemplate;
-use GuzzleHttp\Utils;
+use GuzzleHttp\Utils as GuzzleUtils;
 use InvalidArgumentException;
 use pavlomr\Service\SingletonTrait;
 use pavlomr\Service\UserAgentTrait;
@@ -53,7 +54,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
             RequestOptions::DECODE_CONTENT => 'gzip',
             RequestOptions::HEADERS        => [
                     'Accept'     => static::ACCEPT_CONTENT,
-                    'User-Agent' => $this->userAgent(Utils::defaultUserAgent()),
+                    'User-Agent' => $this->userAgent(GuzzleUtils::defaultUserAgent()),
                 ] + $this->getHeaders(),
             RequestOptions::AUTH           => $this->getAuth(),
             RequestOptions::COOKIES        => true,
@@ -173,13 +174,13 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                         /** @var ResponseInterface $response */
                         $response = $exception->getResponse();
                         if (false === strpos($response->getHeader('Content-Type')[0], $this::ACCEPT_CONTENT)) {
-                            return Create::rejectionFor($response->getReasonPhrase());
+                            return Create::rejectionFor(GuzzlePSR7Utils::streamFor($response->getReasonPhrase()));
                         }
 
                         return Create::rejectionFor($response->getBody());
                     }
 
-                    return Create::rejectionFor($exception->getMessage());
+                    return Create::rejectionFor(GuzzlePSR7Utils::streamFor($exception->getMessage()));
                 }
             )
             ->then(
@@ -285,7 +286,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         try {
             $stream->rewind();
 
-            return Utils::jsonDecode($stream);
+            return GuzzleUtils::jsonDecode($stream);
         } catch (InvalidArgumentException $exception) {
             return new class($stream) {
                 public string $message;
