@@ -170,6 +170,8 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                     return $response->getBody();
                 },
                 function (RequestException $exception) {
+                    error_log("Guzzle:");
+                    error_log(var_export($exception, 1));
                     if ($exception->hasResponse()) {
                         /** @var ResponseInterface $response */
                         $response = $exception->getResponse();
