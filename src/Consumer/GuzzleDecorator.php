@@ -136,7 +136,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      * @param string $name
      * @param array  $arguments
      *
-     * @return PromiseInterface|StreamInterface
+     * @return PromiseInterface|mixed
      * @throws GuzzleException
      */
     public function __call(string $name, array $arguments)
@@ -199,10 +199,10 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      * @param string $action
      * @param        $data
      *
-     * @return StreamInterface
+     * @return mixed
      * @throws GuzzleException
      */
-    protected function _callSync(string $action, $data): StreamInterface
+    protected function _callSync(string $action, $data)
     {
         return $this->parseStream(
             $this
@@ -274,7 +274,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
     protected function dataIndex(): string
     {
-        return $this->getMethod() === 'get' ? RequestOptions::QUERY : RequestOptions::JSON;
+        return 'get' === $this->getMethod() ? RequestOptions::QUERY : RequestOptions::JSON;
     }
 
     /**
