@@ -28,6 +28,7 @@ use pavlomr\Service\UserAgentTrait;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use SoapClient;
+use SoapFault;
 
 abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
 {
@@ -46,6 +47,10 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
     private array      $auth    = [];
     private string     $base    = '';
 
+    /**
+     * SOAPDecorator constructor.
+     * @throws SoapFault
+     */
     public function __construct()
     {
         $options = [
