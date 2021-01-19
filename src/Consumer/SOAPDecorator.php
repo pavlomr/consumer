@@ -153,4 +153,9 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
 
         return trim($ret);
     }
+
+    public function __call($name, $arguments)
+    {
+        return $this->getClient()->{$name}(...$arguments);
+    }
 }
