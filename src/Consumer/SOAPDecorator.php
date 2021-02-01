@@ -37,8 +37,8 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
     use UserAgentTrait;
 
     protected const URI          = 'urn:pavlomr:Service:Provider:Abstract';
-    protected const WSDL         = null;
     protected const SOAP_VERSION = SOAP_1_2;
+
     private array      $headers = [
         'Accept' => ['application/soap+xml', 'application/xml', 'text/xml'],
     ];
@@ -46,14 +46,19 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
     private string     $path    = '';
     private array      $auth    = [];
     private string     $base    = '';
+    private ?string    $wsdl    = null;
 
     /**
      * SOAPDecorator constructor.
+     *
+     * @param string|null $wsdl
+     *
      * @throws SoapFault
      */
-    public function __construct()
+    public function __construct(?string $wsdl = null)
     {
-        $options = [
+        $options = $this->_getOptions()
+            + [
                 'uri'            => static::getServiceURI(), // uri ignored in wsdl mode
                 'soap_version'   => static::SOAP_VERSION,
                 'trace'          => true,
@@ -66,15 +71,18 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
                         ],
                     ]
                 ),
-            ] + $this->getAuth();
+            ]
+            + $this->getAuth();
         // overwrite wsdl location if set. Mandatory for non-wsdl
-        $locationOverride = $this->getBase() . $this->getPath();
-        if (!empty($locationOverride)) {
-            $options['location'] = $locationOverride;
+        if (!empty($this->getLocation())) {
+            $options['location'] = $this->getLocation();
         }
-        $this->setClient(
-            new SoapClient(static::WSDL, $options)
-        );
+        $this
+            ->setWsdl($wsdl)
+            ->setClient(
+                new SoapClient($this->getWsdl(), $options)
+            )
+        ;
     }
 
     public function getAuth(): array
@@ -154,8 +162,38 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
         return trim($ret);
     }
 
-    public function __call($name, $arguments)
+    public function __call(string $name, array $arguments)
     {
         return $this->getClient()->{$name}(...$arguments);
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getWsdl(): ?string
+    {
+        return $this->wsdl;
+    }
+
+    /**
+     * @param string|null $wsdl
+     *
+     * @return SOAPDecorator
+     */
+    public function setWsdl(?string $wsdl): SOAPDecorator
+    {
+        $this->wsdl = $wsdl;
+
+        return $this;
+    }
+
+    protected function _getOptions(): array
+    {
+        return [];
+    }
+
+    protected function getLocation(): string
+    {
+        return $this->getBase() . $this->getPath();
     }
 }
