@@ -1,4 +1,25 @@
 <?php
+/*
+ * Copyright (c) 2021 Pavlo Marenyuk <pavlomr@gmail.com>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 namespace pavlomr\Service\Consumer;
 
@@ -13,7 +34,7 @@ use GuzzleHttp\Psr7\Utils as GuzzlePSR7Utils;
 use GuzzleHttp\RequestOptions;
 use GuzzleHttp\UriTemplate\UriTemplate;
 use GuzzleHttp\Utils as GuzzleUtils;
-use InvalidArgumentException;
+use JsonException;
 use pavlomr\Service\SingletonTrait;
 use pavlomr\Service\UserAgentTrait;
 use Psr\Http\Message\ResponseInterface;
@@ -21,7 +42,8 @@ use Psr\Http\Message\StreamInterface;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
-use stdClass;
+
+use function json_decode;
 
 /**
  * Class GuzzleDecorator
@@ -280,35 +302,28 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param StreamInterface $stream
      *
-     * @return mixed
+     * @return array|object|string
      */
     protected function parseStream(StreamInterface $stream)
     {
+        $stream->rewind();
         try {
+            return json_decode($stream, false, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
             $stream->rewind();
 
-            return GuzzleUtils::jsonDecode($stream);
-        } catch (InvalidArgumentException $exception) {
-            return new class($stream) extends stdClass {
-                public string $message;
-
-                public function __construct(StreamInterface $stream)
-                {
-                    $stream->rewind();
-                    $this->message = $stream->getContents();
-                }
-            };
+            return $stream->getContents();
         }
     }
 
     /**
-     * @param array $header
+     * @param array $headers
      *
      * @return GuzzleDecorator
      */
-    protected function addHeaders(array $header): GuzzleDecorator
+    protected function addHeaders(array $headers): GuzzleDecorator
     {
-        $this->headers += $header;
+        $this->headers = array_replace($this->headers, $headers);
 
         return $this;
     }
