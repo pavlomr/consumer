@@ -25,7 +25,6 @@ namespace pavlomr\Service\Consumer;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\PromiseInterface;
@@ -55,7 +54,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     use SingletonTrait;
     use UserAgentTrait;
 
-    protected const         HTTP_VERSION   = 1.1;
+    protected const         HTTP_VERSION   = '1.1';
     protected const         ACCEPT_CONTENT = 'application/json';
 
     protected string        $path;
@@ -67,8 +66,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     private array           $options = [];
 
     /**
-     * Api constructor.
-     *
      * @param callable[] $handlers
      */
     protected function __construct(array $handlers = [])
@@ -95,7 +92,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param $auth
      *
-     * @return DecoratorInterface
+     * @return $this
      */
     public function setAuth($auth): DecoratorInterface
     {
@@ -115,7 +112,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param string $base
      *
-     * @return GuzzleDecorator
+     * @return $this
      */
     public function setBase(string $base): DecoratorInterface
     {
@@ -135,7 +132,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param string $path
      *
-     * @return DecoratorInterface
+     * @return $this
      */
     public function setPath(string $path): DecoratorInterface
     {
@@ -149,7 +146,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      * @param array  $arguments
      *
      * @return PromiseInterface|mixed
-     * @throws GuzzleException
      */
     public function __call(string $name, array $arguments)
     {
@@ -263,11 +259,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         return $this;
     }
 
-    /**
-     * @param string $action
-     *
-     * @return string
-     */
     protected function actionUri(string $action, $data): string
     {
         return UriTemplate::expand(
@@ -288,11 +279,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      */
     protected function parseStream(StreamInterface $stream)
     {
-        $stream->rewind();
+        $stream->tell() && $stream->rewind();
         try {
             return json_decode($stream, false, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            $stream->rewind();
+        } catch (JsonException $exception) {
+            $stream->tell() && $stream->rewind();
 
             return $stream->getContents();
         }
@@ -322,23 +313,23 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      */
     protected function createConfig(): array
     {
-        $config = [
+        return [
+            'base_uri'                     => $this->getBase(),
+            RequestOptions::VERSION        => static::HTTP_VERSION,
             RequestOptions::VERIFY         => true,
             RequestOptions::DECODE_CONTENT => 'gzip',
-            RequestOptions::HEADERS        => [
+            RequestOptions::HEADERS        => $this->getHeaders() + [
                     'Accept'     => static::ACCEPT_CONTENT,
                     'User-Agent' => $this->userAgent(GuzzleUtils::defaultUserAgent()),
-                ] + $this->getHeaders(),
+                ],
             RequestOptions::AUTH           => $this->getAuth(),
             RequestOptions::COOKIES        => true,
-            RequestOptions::STREAM         => true,
-            RequestOptions::VERSION        => static::HTTP_VERSION,
-            'handler'                      => HandlerStack::create(),
+            'handler'                      => $this->createHandlerStack(),
         ];
-        if ($this->getBase() !== null) {
-            $config['base_uri'] = $this->getBase();
-        }
+    }
 
-        return $config;
+    protected function createHandlerStack(): HandlerStack
+    {
+        return HandlerStack::create();
     }
 }
