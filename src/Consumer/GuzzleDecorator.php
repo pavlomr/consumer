@@ -28,8 +28,8 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\HandlerStack;
-use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Promise\RejectedPromise;
 use GuzzleHttp\Psr7\Utils as GuzzlePSR7Utils;
 use GuzzleHttp\RequestOptions;
 use GuzzleHttp\UriTemplate\UriTemplate;
@@ -55,7 +55,8 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     use SingletonTrait;
     use UserAgentTrait;
 
-    protected const ACCEPT_CONTENT = 'application/json';
+    protected const         HTTP_VERSION   = 1.1;
+    protected const         ACCEPT_CONTENT = 'application/json';
 
     protected string        $path;
     protected string        $method  = 'post';
@@ -63,6 +64,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     private ClientInterface $client;
     private string          $base;
     private array           $headers = [];
+    private array           $options = [];
 
     /**
      * Api constructor.
@@ -71,27 +73,15 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      */
     protected function __construct(array $handlers = [])
     {
-        $this->setLogger($this->logger ?? new NullLogger());
-        $config = [
-            RequestOptions::VERIFY         => true,
-            RequestOptions::DECODE_CONTENT => 'gzip',
-            RequestOptions::HEADERS        => [
-                    'Accept'     => static::ACCEPT_CONTENT,
-                    'User-Agent' => $this->userAgent(GuzzleUtils::defaultUserAgent()),
-                ] + $this->getHeaders(),
-            RequestOptions::AUTH           => $this->getAuth(),
-            RequestOptions::COOKIES        => true,
-        ];
-        if ($this->getBase() !== null) {
-            $config['base_uri'] = $this->getBase();
+        $config = $this->createConfig();
+        foreach ($handlers as $handler) {
+            $config['handler']->push($handler);
         }
 
-        $stack = HandlerStack::create();
-        foreach ($handlers as $handler) {
-            $stack->push($handler);
-        }
-        $config['handler'] = $stack;
-        $this->setClient(new Client($config));
+        $this
+            ->setClient(new Client($config))
+            ->setLogger($this->logger ?? new NullLogger())
+        ;
     }
 
     /**
@@ -165,7 +155,27 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     {
         return substr($name, -5) === 'Async'
             ? $this->_callAsync(substr($name, 0, -5), $arguments[0])
-            : $this->_callSync($name, $arguments[0]);
+            : $this->_callAsync($name, $arguments[0])->wait(true);
+    }
+
+    /**
+     * @return array
+     */
+    public function getOptions(): array
+    {
+        return $this->options;
+    }
+
+    /**
+     * @param array $options
+     *
+     * @return GuzzleDecorator
+     */
+    public function setOptions(array $options): GuzzleDecorator
+    {
+        $this->options = $options;
+
+        return $this;
     }
 
     /**
@@ -182,8 +192,8 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
             ->getClient()
             ->requestAsync(
                 $this->getMethod(),
-                $this->actionUri($action),
-                [
+                $this->actionUri($action, $data),
+                $this->getOptions() + [
                     RequestOptions::HEADERS => $this->getHeaders(),
                     $this->dataIndex()      => $data,
                 ]
@@ -197,48 +207,20 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                         /** @var ResponseInterface $response */
                         $response = $exception->getResponse();
                         if (false === strpos($response->getHeader('Content-Type')[0], $this::ACCEPT_CONTENT)) {
-                            return Create::rejectionFor(GuzzlePSR7Utils::streamFor($response->getReasonPhrase()));
+                            return new RejectedPromise(GuzzlePSR7Utils::streamFor($response->getReasonPhrase()));
                         }
 
-                        return Create::rejectionFor($response->getBody());
+                        return new RejectedPromise($response->getBody());
                     }
 
-                    return Create::rejectionFor(GuzzlePSR7Utils::streamFor($exception->getMessage()));
+                    return new RejectedPromise(GuzzlePSR7Utils::streamFor($exception->getMessage()));
                 }
             )
             ->then(
-                function (StreamInterface $data) {
-                    return $this->parseStream($data);
-                },
-                function (StreamInterface $data) {
-                    return Create::rejectionFor($this->parseStream($data));
-                }
+                fn(StreamInterface $data) => $this->parseStream($data),
+                fn(StreamInterface $data) => new RejectedPromise($this->parseStream($data))
             )
-            ;
-    }
-
-    /**
-     * @param string $action
-     * @param        $data
-     *
-     * @return mixed
-     * @throws GuzzleException
-     */
-    protected function _callSync(string $action, $data)
-    {
-        return $this->parseStream(
-            $this
-                ->getClient()
-                ->request(
-                    $this->getMethod(),
-                    $this->actionUri($action),
-                    [
-                        RequestOptions::HEADERS => $this->getHeaders(),
-                        $this->dataIndex()      => $data,
-                    ]
-                )
-                ->getBody()
-        );
+        ;
     }
 
     /**
@@ -282,15 +264,15 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
-     * @param string $function
+     * @param string $action
      *
      * @return string
      */
-    protected function actionUri(string $function): string
+    protected function actionUri(string $action, $data): string
     {
         return UriTemplate::expand(
             $this->getPath(),
-            ['token' => $this->getAuth()['token'], 'command' => $function]
+            ['command' => $action]
         );
     }
 
@@ -333,5 +315,30 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         $this->headers[$name] = $value;
 
         return $this;
+    }
+
+    /**
+     * @return array
+     */
+    protected function createConfig(): array
+    {
+        $config = [
+            RequestOptions::VERIFY         => true,
+            RequestOptions::DECODE_CONTENT => 'gzip',
+            RequestOptions::HEADERS        => [
+                    'Accept'     => static::ACCEPT_CONTENT,
+                    'User-Agent' => $this->userAgent(GuzzleUtils::defaultUserAgent()),
+                ] + $this->getHeaders(),
+            RequestOptions::AUTH           => $this->getAuth(),
+            RequestOptions::COOKIES        => true,
+            RequestOptions::STREAM         => true,
+            RequestOptions::VERSION        => static::HTTP_VERSION,
+            'handler'                      => HandlerStack::create(),
+        ];
+        if ($this->getBase() !== null) {
+            $config['base_uri'] = $this->getBase();
+        }
+
+        return $config;
     }
 }
