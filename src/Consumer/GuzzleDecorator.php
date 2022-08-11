@@ -165,7 +165,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param array $options
      *
-     * @return GuzzleDecorator
+     * @return $this
      */
     public function setOptions(array $options): GuzzleDecorator
     {
@@ -195,8 +195,12 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                 ]
             )
             ->then(
-                function (ResponseInterface $response) {
-                    return $response->getBody();
+                function (ResponseInterface $response): StreamInterface {
+                    $stream = $response->getBody();
+                    // Logger could fetch data from stream, try to rewind
+                    $stream->tell() && $stream->rewind();
+
+                    return $stream;
                 },
                 function (RequestException $exception) {
                     if ($exception->hasResponse()) {
@@ -206,7 +210,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                             return new RejectedPromise(GuzzlePSR7Utils::streamFor($response->getReasonPhrase()));
                         }
 
-                        return new RejectedPromise($response->getBody());
+                        $stream = $response->getBody();
+                        // Logger could fetch data from stream, try to rewind
+                        $stream->tell() && $stream->rewind();
+
+                        return new RejectedPromise($stream);
                     }
 
                     return new RejectedPromise(GuzzlePSR7Utils::streamFor($exception->getMessage()));
@@ -230,7 +238,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param ClientInterface $client
      *
-     * @return GuzzleDecorator
+     * @return $this
      */
     protected function setClient(ClientInterface $client): GuzzleDecorator
     {
@@ -250,7 +258,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param string $method
      *
-     * @return GuzzleDecorator
+     * @return $this
      */
     protected function setMethod(string $method): GuzzleDecorator
     {
@@ -279,7 +287,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      */
     protected function parseStream(StreamInterface $stream)
     {
-        $stream->tell() && $stream->rewind();
         try {
             return json_decode($stream, false, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
@@ -292,7 +299,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /**
      * @param array $headers
      *
-     * @return GuzzleDecorator
+     * @return $this
      */
     protected function addHeaders(array $headers): GuzzleDecorator
     {
@@ -324,12 +331,13 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                 ],
             RequestOptions::AUTH           => $this->getAuth(),
             RequestOptions::COOKIES        => true,
-            'handler'                      => $this->createHandlerStack(),
+            'handler'                      => HandlerStack::create($this->getHandler()),
         ];
     }
 
-    protected function createHandlerStack(): HandlerStack
+    protected function getHandler(): ?callable
     {
-        return HandlerStack::create();
+        return null;
     }
+
 }
