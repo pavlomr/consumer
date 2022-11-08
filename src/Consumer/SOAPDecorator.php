@@ -74,7 +74,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
             ]
             + $this->getAuth();
         // overwrite wsdl location if set. Mandatory for non-wsdl
-        if (!empty($this->getLocation())) {
+        if (!$this->getLocation()) {
             $options['location'] = $this->getLocation();
         }
         $this

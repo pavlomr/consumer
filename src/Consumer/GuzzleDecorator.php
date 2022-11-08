@@ -45,7 +45,6 @@ use Psr\Log\NullLogger;
 use function json_decode;
 
 /**
- * Class GuzzleDecorator
  * @method mixed _exec(array $params)
  */
 abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterface
@@ -57,16 +56,16 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     protected const         HTTP_VERSION   = '1.1';
     protected const         ACCEPT_CONTENT = 'application/json';
 
+    protected string        $base;
     protected string        $path;
     protected string        $method  = 'post';
     private array           $auth    = [];
     private ClientInterface $client;
-    private string          $base;
     private array           $headers = [];
     private array           $options = [];
 
     /**
-     * @param callable[] $handlers
+     * @param array<callable> $handlers
      */
     protected function __construct(array $handlers = [])
     {
@@ -82,7 +81,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
-     * @return string[]
+     * @return array<int|string, string>
      */
     public function getAuth(): array
     {
@@ -90,7 +89,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
-     * @param $auth
+     * @param array<int|string, string> $auth
      *
      * @return $this
      */
@@ -175,13 +174,19 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
-     * @return array
+     * @return array<string, string>
      */
     protected function getHeaders(): array
     {
         return $this->headers;
     }
 
+    /**
+     * @param string $action
+     * @param        $data
+     *
+     * @return \GuzzleHttp\Promise\PromiseInterface
+     */
     protected function _callAsync(string $action, $data): PromiseInterface
     {
         return $this
