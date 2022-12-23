@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (c) 2021 Pavlo Marenyuk <pavlomr@gmail.com>
+ * Copyright (c) 2022 Pavlo Marenyuk <pavlomr@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,17 +36,18 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
     use SingletonTrait;
     use UserAgentTrait;
 
-    protected const URI          = 'urn:pavlomr:Service:Provider:Abstract';
     protected const SOAP_VERSION = SOAP_1_2;
+    protected const URI          = 'urn:pavlomr:Service:Provider:Abstract';
 
+    private string     $path;
+    private array      $auth    = [];
+    private string     $base;
+    private SoapClient $client;
     private array      $headers = [
         'Accept' => ['application/soap+xml', 'application/xml', 'text/xml'],
     ];
-    private SoapClient $client;
-    private string     $path    = '';
-    private array      $auth    = [];
-    private string     $base    = '';
-    private ?string    $wsdl    = null;
+    private ?string    $wsdl;
+    private array      $options = [];
 
     /**
      * SOAPDecorator constructor.
@@ -57,32 +58,34 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
      */
     public function __construct(?string $wsdl = null)
     {
-        $options = $this->_getOptions()
-            + [
-                'uri'            => static::getServiceURI(), // uri ignored in wsdl mode
-                'soap_version'   => static::SOAP_VERSION,
-                'trace'          => true,
-                'exceptions'     => true,
-                'user_agent'     => $this->userAgent(SoapClient::class),
-                'stream_context' => stream_context_create(
-                    [
-                        'http' => [
-                            'header' => $this->getHeaderString(),
-                        ],
-                    ]
-                ),
-            ]
-            + $this->getAuth();
-        // overwrite wsdl location if set. Mandatory for non-wsdl
-        if (!$this->getLocation()) {
-            $options['location'] = $this->getLocation();
-        }
         $this
             ->setWsdl($wsdl)
             ->setClient(
-                new SoapClient($this->getWsdl(), $options)
+                new SoapClient(
+                    $this->getWsdl(), $this->getOptions() +
+                    [
+                        'uri'            => static::getServiceURI(), # uri ignored in wsdl mode
+                        'soap_version'   => static::SOAP_VERSION,
+                        'trace'          => true,
+                        'exceptions'     => true,
+                        'user_agent'     => $this->userAgent(SoapClient::class),
+                        'stream_context' => stream_context_create(
+                            [
+                                'http' => [
+                                    'header' => $this->getHeaderString(),
+                                ],
+                            ]
+                        ),
+                    ]
+                    + $this->getAuth()
+                )
             )
         ;
+    }
+
+    public static function getServiceURI(): string
+    {
+        return static::URI;
     }
 
     public function getAuth(): array
@@ -102,6 +105,11 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
         return $this->path;
     }
 
+    /**
+     * @param string $path
+     *
+     * @return $this
+     */
     public function setPath(string $path): DecoratorInterface
     {
         $this->path = $path;
@@ -114,6 +122,11 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
         return $this->base;
     }
 
+    /**
+     * @param string $base
+     *
+     * @return $this
+     */
     public function setBase(string $base): DecoratorInterface
     {
         $this->base = $base;
@@ -121,14 +134,6 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
         return $this;
     }
 
-    public static function getServiceURI(): string
-    {
-        return static::URI;
-    }
-
-    /**
-     * @return SoapClient
-     */
     public function getClient(): SoapClient
     {
         return $this->client;
@@ -137,18 +142,15 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
     /**
      * @param SoapClient $client
      *
-     * @return SOAPDecorator
+     * @return $this
      */
-    public function setClient(SoapClient $client): SOAPDecorator
+    public function setClient(SoapClient $client): self
     {
         $this->client = $client;
 
         return $this;
     }
 
-    /**
-     * @return string
-     */
     public function getHeaderString(): string
     {
         $ret = '';
@@ -167,9 +169,6 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
         return $this->getClient()->{$name}(...$arguments);
     }
 
-    /**
-     * @return string|null
-     */
     public function getWsdl(): ?string
     {
         return $this->wsdl;
@@ -178,20 +177,36 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
     /**
      * @param string|null $wsdl
      *
-     * @return SOAPDecorator
+     * @return $this
      */
-    public function setWsdl(?string $wsdl): SOAPDecorator
+    public function setWsdl(?string $wsdl): self
     {
         $this->wsdl = $wsdl;
 
         return $this;
     }
 
-    protected function _getOptions(): array
+    public function getOptions(): array
     {
-        return [];
+        return $this->options;
     }
 
+    /**
+     * @param array $options
+     *
+     * @return $this
+     */
+    public function setOptions(array $options): self
+    {
+        $this->options = $options;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     * @deprecated set location in @see self::_getOptions()
+     */
     protected function getLocation(): string
     {
         return $this->getBase() . $this->getPath();

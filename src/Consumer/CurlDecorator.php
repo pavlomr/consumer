@@ -28,24 +28,25 @@ use pavlomr\Service\UserAgentTrait;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 
-use function curl_version;
-
 class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
 {
-    protected const EXPOSE_INTERNALS = true;
     use LoggerAwareTrait;
     use SingletonTrait;
     use UserAgentTrait;
 
-    protected string $base;
-    protected string $path;
-    private array    $auth = [];
-    /** @var false|resource */
+    protected const EXPOSE_INTERNALS = true;
+
+    private string $base;
+    private string $path;
+    private array  $auth = [];
+    /**
+     * @var resource
+     */
     private $client;
 
     public function __construct(array $curlOptions = [])
     {
-        $this->client = curl_init();
+        $this->setClient(curl_init());
         curl_setopt_array(
             $this->getClient(),
             $curlOptions + [
@@ -60,9 +61,7 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
                 CURLOPT_SSL_VERIFYPEER => true,
                 CURLOPT_VERBOSE        => false,
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_USERAGENT      => $this->userAgent(
-                    sprintf('PHP/%s curl/%s', PHP_VERSION, curl_version()['version'])
-                ),
+                CURLOPT_USERAGENT      => $this->userAgent(''),
                 CURLOPT_USERNAME       => $this->getAuth()['username'] ?? null,
                 CURLOPT_PASSWORD       => $this->getAuth()['password'] ?? null,
             ]
@@ -71,7 +70,7 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
 
     public function __destruct()
     {
-        curl_close($this->client);
+        curl_close($this->getClient());
     }
 
     /**
@@ -131,6 +130,18 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     protected function getClient()
     {
         return $this->client;
+    }
+
+    /**
+     * @param resource $client
+     *
+     * @return $this
+     */
+    public function setClient($client): self
+    {
+        $this->client = $client;
+
+        return $this;
     }
 
     protected function mkUrl(...$arguments): string
