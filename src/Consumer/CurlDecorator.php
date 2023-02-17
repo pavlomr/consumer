@@ -38,6 +38,7 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
 
     private string $base;
     private string $path;
+    /** @var array<string> */
     private array  $auth = [];
     /**
      * @var resource
@@ -74,7 +75,7 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     }
 
     /**
-     * @inheritDoc
+     * @return string[]
      */
     public function getAuth(): array
     {
@@ -82,7 +83,9 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     }
 
     /**
-     * @inheritDoc
+     * @param string[] $auth
+     *
+     * @return $this
      */
     public function setAuth($auth): DecoratorInterface
     {
@@ -127,6 +130,9 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
         return $this;
     }
 
+    /**
+     * @return resource
+     */
     protected function getClient()
     {
         return $this->client;
@@ -144,6 +150,11 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
         return $this;
     }
 
+    /**
+     * @param string $arguments
+     *
+     * @return string
+     */
     protected function mkUrl(...$arguments): string
     {
         return $this->getBase() .
@@ -156,6 +167,11 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
             );
     }
 
+    /**
+     * @param string $arguments
+     *
+     * @return string
+     */
     protected function mkPath(...$arguments): string
     {
         return $this->getPath() . implode('/', $arguments);

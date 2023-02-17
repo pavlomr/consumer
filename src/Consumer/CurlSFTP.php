@@ -39,6 +39,11 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
+    /**
+     * @param string $dir
+     *
+     * @return bool|string
+     */
     public function getList(string $dir = '')
     {
         return $this->_exec(
@@ -53,6 +58,12 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
+    /**
+     * @param string               $name
+     * @param string|resource|null $outputStream
+     *
+     * @return bool|string
+     */
     public function getItem($name, $outputStream = null)
     {
         return $this->_exec(
@@ -66,6 +77,12 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
+    /**
+     * @param string          $name
+     * @param string|resource $inputStream
+     *
+     * @return bool|string
+     */
     public function putItem($name, $inputStream)
     {
         return $this->_exec(
@@ -78,13 +95,19 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
-    public function mvItem($name1, $name2)
+    /**
+     * @param string $src
+     * @param string $dst
+     *
+     * @return bool|string
+     */
+    public function mvItem($src, $dst)
     {
         return $this->_exec(
             [
                 CURLOPT_HTTPGET        => true,
                 CURLOPT_URL            => $this->mkUrl(),
-                CURLOPT_QUOTE          => [sprintf('rename %s %s', $this->mkPath($name1), $this->mkPath($name2))],
+                CURLOPT_QUOTE          => [sprintf('rename %s %s', $this->mkPath($src), $this->mkPath($dst))],
                 CURLOPT_INFILE         => null,
                 CURLOPT_FILE           => STDOUT,
                 CURLOPT_RETURNTRANSFER => true,
@@ -92,6 +115,11 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
+    /**
+     * @param string $name
+     *
+     * @return bool|string
+     */
     public function rmItem($name)
     {
         return $this->_exec(
@@ -106,6 +134,12 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
+    /**
+     * @param string|null $mask
+     * @param string      $dir
+     *
+     * @return iterable
+     */
     public function getFiles(string $mask = null, string $dir = ''): iterable
     {
         foreach (explode(PHP_EOL, $this->getList($dir)) as $item) {

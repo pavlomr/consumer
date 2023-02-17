@@ -93,6 +93,11 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
         return $this->auth;
     }
 
+    /**
+     * @param array $auth
+     *
+     * @return $this
+     */
     public function setAuth($auth): DecoratorInterface
     {
         $this->auth = $auth;
