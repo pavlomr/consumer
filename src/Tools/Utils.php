@@ -33,9 +33,9 @@ final class Utils
      * @param iterable|object $data
      * @param \Closure|null   $keyName
      *
-     * @return non-empty-array<int, T>|empty
+     * @return non-empty-array<int, T>|array
      */
-    public static function asNameContents($data, Closure $keyName = null)
+    public static function asNameContents(iterable|object $data, Closure $keyName = null): array
     {
         if (null === $keyName) {
             $keyName = static fn($i): string => $i;

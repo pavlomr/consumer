@@ -26,6 +26,7 @@
         errorLevel="6"
         xmlns="https://getpsalm.org/schema/config"
         xsi:schemaLocation="https://getpsalm.org/schema/config https://psalm.dev/schema/config"
+        findUnusedCode="true" findUnusedBaselineEntry="true"
 >
     <projectFiles>
         <directory name="src"/>

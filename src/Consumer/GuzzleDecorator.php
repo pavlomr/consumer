@@ -56,9 +56,10 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     protected const         HTTP_VERSION   = '1.1';
     protected const         ACCEPT_CONTENT = 'application/json';
 
-    protected string        $base;
-    protected string        $path;
-    protected string        $method  = 'post';
+    protected string $method = 'post';
+    protected string $base;
+    protected string $path;
+    /** @var array<string> */
     private array           $auth    = [];
     private ClientInterface $client;
     private array           $headers = [];
@@ -149,13 +150,13 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      */
     public function __call(string $name, array $arguments)
     {
-        return substr($name, -5) === 'Async'
+        return str_ends_with($name, 'Async')
             ? $this
                 ->setOption(RequestOptions::SYNCHRONOUS, false)
                 ->_callAsync(substr($name, 0, -5), $arguments[0])
             : $this
                 ->setOption(RequestOptions::SYNCHRONOUS, true)
-                ->_callAsync($name, $arguments[0])->wait(true)
+                ->_callAsync($name, $arguments[0])->wait()
         ;
     }
 
@@ -172,7 +173,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    public function setOptions(array $options): GuzzleDecorator
+    public function setOptions(array $options): self
     {
         $this->options = $options;
 
@@ -181,11 +182,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
     /**
      * @param string                $key
-     * @param string|int|bool|array $option
+     * @param array|bool|int|string $option
      *
      * @return $this
      */
-    public function setOption(string $key, $option): GuzzleDecorator
+    public function setOption(string $key, array|bool|int|string $option): self
     {
         $this->options[$key] = $option;
 
@@ -206,7 +207,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    protected function _callAsync(string $action, $data): PromiseInterface
+    protected function _callAsync(string $action, object|array $data): PromiseInterface
     {
         return $this
             ->_sendRequest($action, $data)
@@ -222,7 +223,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                     if ($exception->hasResponse()) {
                         /** @var ResponseInterface $response */
                         $response = $exception->getResponse();
-                        if (false === strpos($response->getHeader('Content-Type')[0], $this::ACCEPT_CONTENT)) {
+                        if (!str_contains($response->getHeader('Content-Type')[0], $this::ACCEPT_CONTENT)) {
                             return new RejectedPromise(GuzzlePSR7Utils::streamFor($response->getReasonPhrase()));
                         }
 
@@ -256,7 +257,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    protected function setClient(ClientInterface $client): GuzzleDecorator
+    protected function setClient(ClientInterface $client): self
     {
         $this->client = $client;
 
@@ -273,7 +274,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    protected function setMethod(string $method): GuzzleDecorator
+    protected function setMethod(string $method): self
     {
         $this->method = $method;
 
@@ -282,11 +283,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
     /**
      * @param string          $action
-     * @param object|iterable $data
+     * @param iterable|object $data
      *
      * @return string
      */
-    protected function actionUri(string $action, $data): string
+    protected function actionUri(string $action, iterable|object $data): string
     {
         return UriTemplate::expand($this->getPath(), ['command' => $action]);
     }
@@ -301,11 +302,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return array|object|string|null
      */
-    protected function parseStream(StreamInterface $stream)
+    protected function parseStream(StreamInterface $stream): object|array|string|null
     {
         try {
             return json_decode((string)$stream, false, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
+        } catch (JsonException) {
             $stream->tell() && $stream->rewind();
 
             return $stream->getContents();
@@ -317,7 +318,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    protected function addHeaders(array $headers): GuzzleDecorator
+    protected function addHeaders(array $headers): self
     {
         $this->headers = array_replace($this->headers, $headers);
 
@@ -330,7 +331,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    protected function setHeader(string $name, string $value): GuzzleDecorator
+    protected function setHeader(string $name, string $value): self
     {
         $this->headers[$name] = $value;
 
@@ -364,11 +365,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
     /**
      * @param string       $action
-     * @param array|object $data
+     * @param object|array $data
      *
      * @return \GuzzleHttp\Promise\PromiseInterface
      */
-    protected function _sendRequest(string $action, $data): PromiseInterface
+    protected function _sendRequest(string $action, object|array $data): PromiseInterface
     {
         return $this
             ->getClient()

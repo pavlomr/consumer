@@ -23,6 +23,7 @@
 
 namespace pavlomr\Service\Consumer;
 
+use CurlHandle;
 use pavlomr\Service\SingletonTrait;
 use pavlomr\Service\UserAgentTrait;
 use Psr\Log\LoggerAwareInterface;
@@ -39,32 +40,31 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     private string $base;
     private string $path;
     /** @var array<string> */
-    private array  $auth = [];
-    /**
-     * @var resource
-     */
-    private $client;
+    private array      $auth    = [];
+    private CurlHandle $client;
+    private array      $options = [
+        CURLOPT_HEADER         => false,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_ENCODING       => 'gzip',
+        CURLOPT_AUTOREFERER    => true,
+        CURLOPT_CONNECTTIMEOUT => 120,
+        CURLOPT_TIMEOUT        => 120,
+        CURLOPT_MAXREDIRS      => 5,
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_VERBOSE        => false,
+        CURLOPT_RETURNTRANSFER => true,
+    ];
 
     public function __construct(array $curlOptions = [])
     {
         $this->setClient(curl_init());
         curl_setopt_array(
             $this->getClient(),
-            $curlOptions + [
-                CURLOPT_HEADER         => false,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_ENCODING       => 'gzip',
-                CURLOPT_AUTOREFERER    => true,
-                CURLOPT_CONNECTTIMEOUT => 120,
-                CURLOPT_TIMEOUT        => 120,
-                CURLOPT_MAXREDIRS      => 5,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_VERBOSE        => false,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_USERAGENT      => $this->userAgent(''),
-                CURLOPT_USERNAME       => $this->getAuth()['username'] ?? null,
-                CURLOPT_PASSWORD       => $this->getAuth()['password'] ?? null,
+            $curlOptions + $this->getOptions() + [
+                CURLOPT_USERAGENT => $this->userAgent(''),
+                CURLOPT_USERNAME  => $this->getAuth()['username'] ?? null,
+                CURLOPT_PASSWORD  => $this->getAuth()['password'] ?? null,
             ]
         );
     }
@@ -83,7 +83,7 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     }
 
     /**
-     * @param string[] $auth
+     * @param array<string> $auth
      *
      * @return $this
      */
@@ -131,19 +131,27 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     }
 
     /**
-     * @return resource
+     * @return array
      */
-    protected function getClient()
+    public function getOptions(): array
+    {
+        return $this->options;
+    }
+
+    /**
+     * @return \CurlHandle
+     */
+    protected function getClient(): CurlHandle
     {
         return $this->client;
     }
 
     /**
-     * @param resource $client
+     * @param \CurlHandle $client
      *
      * @return $this
      */
-    public function setClient($client): self
+    public function setClient(CurlHandle $client): self
     {
         $this->client = $client;
 
@@ -180,9 +188,9 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     /**
      * @param array $curlOptions
      *
-     * @return bool|string
+     * @return string
      */
-    protected function _exec(array $curlOptions = [])
+    protected function _exec(array $curlOptions = []): string
     {
         curl_setopt_array($this->getClient(), $curlOptions);
 
