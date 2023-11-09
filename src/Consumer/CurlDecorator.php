@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (c) 2022 Pavlo Marenyuk <pavlomr@gmail.com>
+ * Copyright (c) 2023 Pavlo Marenyuk <pavlomr@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
     use SingletonTrait;
     use UserAgentTrait;
 
-    protected const EXPOSE_INTERNALS = true;
+    public const EXPOSE_INTERNALS = true;
 
     private string $base;
     private string $path;
@@ -87,60 +87,42 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setAuth($auth): DecoratorInterface
+    public function setAuth($auth): static
     {
         $this->auth = $auth;
 
         return $this;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getPath(): string
     {
         return $this->path;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function setPath(string $path): DecoratorInterface
+    public function setPath(string $path): static
     {
         $this->path = $path;
 
         return $this;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getBase(): string
     {
         return $this->base;
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function setBase(string $base): DecoratorInterface
+    public function setBase(string $base): static
     {
         $this->base = $base;
 
         return $this;
     }
 
-    /**
-     * @return array
-     */
     public function getOptions(): array
     {
         return $this->options;
     }
 
-    /**
-     * @return \CurlHandle
-     */
     protected function getClient(): CurlHandle
     {
         return $this->client;
@@ -151,18 +133,13 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setClient(CurlHandle $client): self
+    public function setClient(CurlHandle $client): static
     {
         $this->client = $client;
 
         return $this;
     }
 
-    /**
-     * @param string $arguments
-     *
-     * @return string
-     */
     protected function mkUrl(...$arguments): string
     {
         return $this->getBase() .
@@ -175,21 +152,11 @@ class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
             );
     }
 
-    /**
-     * @param string $arguments
-     *
-     * @return string
-     */
     protected function mkPath(...$arguments): string
     {
         return $this->getPath() . implode('/', $arguments);
     }
 
-    /**
-     * @param array $curlOptions
-     *
-     * @return string
-     */
     protected function _exec(array $curlOptions = []): string
     {
         curl_setopt_array($this->getClient(), $curlOptions);

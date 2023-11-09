@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (c) 2021 Pavlo Marenyuk <pavlomr@gmail.com>
+ * Copyright (c) 2023 Pavlo Marenyuk <pavlomr@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,10 @@ use GuzzleHttp\RequestOptions;
 use GuzzleHttp\UriTemplate\UriTemplate;
 use GuzzleHttp\Utils as GuzzleUtils;
 use JsonException;
+use pavlomr\Normalizer\NormalizerAwareInterface;
+use pavlomr\Normalizer\NormalizerAwareTrait;
 use pavlomr\Service\SingletonTrait;
+use pavlomr\Service\Tools\CompatibilityNormalizer;
 use pavlomr\Service\UserAgentTrait;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
@@ -44,22 +47,20 @@ use Psr\Log\NullLogger;
 
 use function json_decode;
 
-/**
- * @method mixed _exec(array $params)
- */
-abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterface
+abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterface, NormalizerAwareInterface
 {
     use LoggerAwareTrait;
     use SingletonTrait;
     use UserAgentTrait;
+    use NormalizerAwareTrait;
 
-    protected const         HTTP_VERSION   = '1.1';
+    protected const         HTTP_VERSION = 1.1;
     protected const         ACCEPT_CONTENT = 'application/json';
 
     protected string $method = 'post';
     protected string $base;
     protected string $path;
-    /** @var array<string> */
+    /** @var array<int|string, string> */
     private array           $auth    = [];
     private ClientInterface $client;
     private array           $headers = [];
@@ -78,6 +79,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
         $this
             ->setClient(new Client($config))
+            ->setNormalizer($this->normalizer ?? new CompatibilityNormalizer())
             ->setLogger($this->logger ?? new NullLogger())
         ;
     }
@@ -91,11 +93,11 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
-     * @param array<int|string, string> $auth
+     * @param array<string> $auth
      *
      * @return $this
      */
-    public function setAuth($auth): DecoratorInterface
+    public function setAuth($auth): static
     {
         $this->auth = $auth;
 
@@ -115,7 +117,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    public function setBase(string $base): DecoratorInterface
+    public function setBase(string $base): static
     {
         $this->base = $base;
 
@@ -135,7 +137,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    public function setPath(string $path): DecoratorInterface
+    public function setPath(string $path): static
     {
         $this->path = $path;
 
@@ -143,20 +145,21 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
+     * @template T
      * @param string $name
      * @param array  $arguments
      *
-     * @return PromiseInterface|mixed
+     * @return PromiseInterface<T>|T
      */
     public function __call(string $name, array $arguments)
     {
         return str_ends_with($name, 'Async')
             ? $this
                 ->setOption(RequestOptions::SYNCHRONOUS, false)
-                ->_callAsync(substr($name, 0, -5), $arguments[0])
+                ->_callAsync(substr($name, 0, -5), $arguments[0] ?? null)
             : $this
                 ->setOption(RequestOptions::SYNCHRONOUS, true)
-                ->_callAsync($name, $arguments[0])->wait()
+                ->_callAsync($name, $arguments[0] ?? null)->wait()
         ;
     }
 
@@ -173,7 +176,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    public function setOptions(array $options): self
+    public function setOptions(array $options): static
     {
         $this->options = $options;
 
@@ -186,7 +189,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    public function setOption(string $key, array|bool|int|string $option): self
+    public function setOption(string $key, array|bool|int|string $option): static
     {
         $this->options[$key] = $option;
 
@@ -201,13 +204,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         return $this->headers;
     }
 
-    /**
-     * @param string       $action
-     * @param object|array $data
-     *
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    protected function _callAsync(string $action, object|array $data): PromiseInterface
+    protected function _callAsync(string $action, mixed $data): PromiseInterface
     {
         return $this
             ->_sendRequest($action, $data)
@@ -244,9 +241,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         ;
     }
 
-    /**
-     * @return ClientInterface
-     */
     protected function getClient(): ClientInterface
     {
         return $this->client;
@@ -257,7 +251,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    protected function setClient(ClientInterface $client): self
+    protected function setClient(ClientInterface $client): static
     {
         $this->client = $client;
 
@@ -269,25 +263,14 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         return $this->method;
     }
 
-    /**
-     * @param string $method
-     *
-     * @return $this
-     */
-    protected function setMethod(string $method): self
+    protected function setMethod(string $method): static
     {
         $this->method = $method;
 
         return $this;
     }
 
-    /**
-     * @param string          $action
-     * @param iterable|object $data
-     *
-     * @return string
-     */
-    protected function actionUri(string $action, iterable|object $data): string
+    protected function actionUri(string $action, mixed $data): string
     {
         return UriTemplate::expand($this->getPath(), ['command' => $action]);
     }
@@ -297,11 +280,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
         return 'get' === $this->getMethod() ? RequestOptions::QUERY : RequestOptions::JSON;
     }
 
-    /**
-     * @param StreamInterface $stream
-     *
-     * @return array|object|string|null
-     */
     protected function parseStream(StreamInterface $stream): object|array|string|null
     {
         try {
@@ -318,20 +296,14 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
      *
      * @return $this
      */
-    protected function addHeaders(array $headers): self
+    protected function addHeaders(array $headers): static
     {
         $this->headers = array_replace($this->headers, $headers);
 
         return $this;
     }
 
-    /**
-     * @param string $name
-     * @param string $value
-     *
-     * @return $this
-     */
-    protected function setHeader(string $name, string $value): self
+    protected function setHeader(string $name, string $value): static
     {
         $this->headers[$name] = $value;
 
@@ -339,7 +311,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     }
 
     /**
-     * @return array
+     * @return array<string,string|array|object>
      */
     protected function createConfig(): array
     {
@@ -354,22 +326,16 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                 ],
             RequestOptions::AUTH           => $this->getAuth(),
             RequestOptions::COOKIES        => true,
-            'handler'                      => HandlerStack::create($this->getHandler()),
+            'handler' => HandlerStack::create($this->_getHandler()),
         ];
     }
 
-    protected function getHandler(): ?callable
+    protected function _getHandler(): ?callable
     {
         return null;
     }
 
-    /**
-     * @param string       $action
-     * @param object|array $data
-     *
-     * @return \GuzzleHttp\Promise\PromiseInterface
-     */
-    protected function _sendRequest(string $action, object|array $data): PromiseInterface
+    protected function _sendRequest(string $action, mixed $data): PromiseInterface
     {
         return $this
             ->getClient()
@@ -378,10 +344,9 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                 $this->actionUri($action, $data),
                 $this->getOptions() + [
                     RequestOptions::HEADERS => $this->getHeaders(),
-                    $this->dataIndex()      => $data,
+                    $this->dataIndex() => $this->normalizer->normalize($data),
                 ]
             )
         ;
     }
-
 }

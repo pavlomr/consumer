@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (c) 2022 Pavlo Marenyuk <pavlomr@gmail.com>
+ * Copyright (c) 2023 Pavlo Marenyuk <pavlomr@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,12 +39,7 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
-    /**
-     * @param string $dir
-     *
-     * @return bool|string
-     */
-    public function getList(string $dir = '')
+    public function getList(string $dir = ''): string
     {
         return $this->_exec(
             [
@@ -59,12 +54,9 @@ class CurlSFTP extends CurlDecorator
     }
 
     /**
-     * @param string               $name
      * @param string|resource|null $outputStream
-     *
-     * @return bool|string
      */
-    public function getItem($name, $outputStream = null)
+    public function getItem(string $name, $outputStream = null): string
     {
         return $this->_exec(
             [
@@ -78,12 +70,9 @@ class CurlSFTP extends CurlDecorator
     }
 
     /**
-     * @param string          $name
      * @param string|resource $inputStream
-     *
-     * @return bool|string
      */
-    public function putItem($name, $inputStream)
+    public function putItem(string $name, $inputStream): string
     {
         return $this->_exec(
             [
@@ -95,13 +84,7 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
-    /**
-     * @param string $src
-     * @param string $dst
-     *
-     * @return bool|string
-     */
-    public function mvItem($src, $dst)
+    public function mvItem(string $src, string $dst): string
     {
         return $this->_exec(
             [
@@ -115,12 +98,7 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
-    /**
-     * @param string $name
-     *
-     * @return bool|string
-     */
-    public function rmItem($name)
+    public function rmItem(string $name): string
     {
         return $this->_exec(
             [
@@ -134,20 +112,12 @@ class CurlSFTP extends CurlDecorator
         );
     }
 
-    /**
-     * @param string|null $mask
-     * @param string      $dir
-     *
-     * @return iterable
-     */
-    public function getFiles(string $mask = null, string $dir = ''): iterable
+    public function getFiles(?string $mask = null, string $dir = ''): iterable
     {
         foreach (explode(PHP_EOL, $this->getList($dir)) as $item) {
-            if (!empty($mask)) {
-                if (preg_match($mask, $item, $matches)) {
-                    yield $item;
-                }
-            } else {
+            if (null === $mask) {
+                yield $item;
+            } elseif (preg_match($mask, $item, $matches)) {
                 yield $item;
             }
         }

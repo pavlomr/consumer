@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (c) 2022 Pavlo Marenyuk <pavlomr@gmail.com>
+ * Copyright (c) 2023 Pavlo Marenyuk <pavlomr@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,8 +62,8 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
             ->setWsdl($wsdl)
             ->setClient(
                 new SoapClient(
-                    $this->getWsdl(), $this->getOptions() +
-                    [
+                    $this->getWsdl(),
+                    $this->getOptions() + [
                         'uri'            => static::getServiceURI(), # uri ignored in wsdl mode
                         'soap_version'   => static::SOAP_VERSION,
                         'trace'          => true,
@@ -98,7 +98,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setAuth($auth): DecoratorInterface
+    public function setAuth($auth): static
     {
         $this->auth = $auth;
 
@@ -115,7 +115,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setPath(string $path): DecoratorInterface
+    public function setPath(string $path): static
     {
         $this->path = $path;
 
@@ -132,7 +132,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setBase(string $base): DecoratorInterface
+    public function setBase(string $base): static
     {
         $this->base = $base;
 
@@ -149,7 +149,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setClient(SoapClient $client): self
+    public function setClient(SoapClient $client): static
     {
         $this->client = $client;
 
@@ -184,7 +184,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setWsdl(?string $wsdl): self
+    public function setWsdl(?string $wsdl): static
     {
         $this->wsdl = $wsdl;
 
@@ -201,7 +201,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
      *
      * @return $this
      */
-    public function setOptions(array $options): self
+    public function setOptions(array $options): static
     {
         $this->options = $options;
 
@@ -210,7 +210,7 @@ abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
 
     /**
      * @return string
-     * @deprecated set location in @see self::_getOptions()
+     * @deprecated set location in @see self::getOptions()
      */
     protected function getLocation(): string
     {

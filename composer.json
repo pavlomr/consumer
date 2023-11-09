@@ -1,7 +1,7 @@
 {
   "authors": [
     {
-      "homepage": "https://www.facebook.com/pavel.marenyuk",
+      "homepage": "https://github.com/pavlomr",
       "email": "pavlomr@gmail.com",
       "name": "Pavlo Marenyuk",
       "role": "Author"
@@ -17,7 +17,8 @@
     "psr/http-client": "^1.0|^2.0",
     "guzzlehttp/guzzle": "^7.0",
     "guzzlehttp/uri-template": "^1.0",
-    "pavlomr/decorator": "^1.0"
+    "pavlomr/decorator": "^1.0",
+    "pavlomr/normalizer": "^1.1.1"
   },
   "name": "pavlomr/consumer",
   "description": "Service consumer",
