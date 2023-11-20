@@ -1,10 +1,10 @@
 {
   "authors": [
     {
-      "homepage": "https://github.com/pavlomr",
-      "email": "pavlomr@gmail.com",
+      "role": "Author",
       "name": "Pavlo Marenyuk",
-      "role": "Author"
+      "email": "pavlomr@gmail.com",
+      "homepage": "https://github.com/pavlomr"
     }
   ],
   "require": {

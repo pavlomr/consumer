@@ -60,6 +60,7 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     /** @var array<int|string, string> */
     private array           $auth    = [];
     private ClientInterface $client;
+    /** @deprecated merge with options */
     private array           $headers = [];
     /** @var array<string, bool|int|string|array> */
     private array $options = [];
@@ -338,14 +339,14 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
             ->requestAsync(
                 $this->getMethod(),
                 $this->actionUri($action, $data),
-                $this->getOptions() + [
+                $this->serializeData($action, $data) + $this->getOptions() + [
                     RequestOptions::HEADERS => $this->getHeaders(),
-                ] + $this->serializeData($data)
+                ]
             )
         ;
     }
 
-    protected function serializeData(mixed $data): array
+    protected function serializeData(string $action, mixed $data): array
     {
         return [$this->dataIndex() => $data];
     }
