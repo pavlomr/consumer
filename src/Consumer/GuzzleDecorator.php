@@ -34,10 +34,7 @@ use GuzzleHttp\RequestOptions;
 use GuzzleHttp\UriTemplate\UriTemplate;
 use GuzzleHttp\Utils as GuzzleUtils;
 use JsonException;
-use pavlomr\Normalizer\NormalizerAwareInterface;
-use pavlomr\Normalizer\NormalizerAwareTrait;
 use pavlomr\Service\SingletonTrait;
-use pavlomr\Service\Tools\CompatibilityNormalizer;
 use pavlomr\Service\UserAgentTrait;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
@@ -47,15 +44,15 @@ use Psr\Log\NullLogger;
 
 use function json_decode;
 
-abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterface, NormalizerAwareInterface
+abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterface
 {
     use LoggerAwareTrait;
     use SingletonTrait;
     use UserAgentTrait;
-    use NormalizerAwareTrait;
 
     protected const         HTTP_VERSION = 1.1;
     protected const         ACCEPT_CONTENT = 'application/json';
+    protected const         USE_COOKIES  = true;
 
     protected string $method = 'post';
     protected string $base;
@@ -79,7 +76,6 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
 
         $this
             ->setClient(new Client($config))
-            ->setNormalizer($this->normalizer ?? new CompatibilityNormalizer())
             ->setLogger($this->logger ?? new NullLogger())
         ;
     }
@@ -325,8 +321,8 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                     'User-Agent' => $this->userAgent(GuzzleUtils::defaultUserAgent()),
                 ],
             RequestOptions::AUTH           => $this->getAuth(),
-            RequestOptions::COOKIES        => true,
-            'handler' => HandlerStack::create($this->_getHandler()),
+            RequestOptions::COOKIES => static::USE_COOKIES,
+            'handler'               => HandlerStack::create($this->_getHandler()),
         ];
     }
 
@@ -344,9 +340,13 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
                 $this->actionUri($action, $data),
                 $this->getOptions() + [
                     RequestOptions::HEADERS => $this->getHeaders(),
-                    $this->dataIndex() => $this->normalizer->normalize($data),
-                ]
+                ] + $this->serializeData($data)
             )
         ;
+    }
+
+    protected function serializeData(mixed $data): array
+    {
+        return [$this->dataIndex() => $data];
     }
 }
