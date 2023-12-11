@@ -34,7 +34,6 @@ use GuzzleHttp\RequestOptions;
 use GuzzleHttp\UriTemplate\UriTemplate;
 use GuzzleHttp\Utils as GuzzleUtils;
 use JsonException;
-use pavlomr\Service\SingletonTrait;
 use pavlomr\Service\UserAgentTrait;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
@@ -47,7 +46,6 @@ use function json_decode;
 abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterface
 {
     use LoggerAwareTrait;
-    use SingletonTrait;
     use UserAgentTrait;
 
     protected const         HTTP_VERSION = 1.1;
@@ -58,10 +56,10 @@ abstract class GuzzleDecorator implements DecoratorInterface, LoggerAwareInterfa
     protected string $base;
     protected string $path;
     /** @var array<int|string, string> */
-    private array           $auth    = [];
+    private array $auth = [];
     private ClientInterface $client;
     /** @deprecated merge with options */
-    private array           $headers = [];
+    private array $headers = [];
     /** @var array<string, bool|int|string|array> */
     private array $options = [];
 
