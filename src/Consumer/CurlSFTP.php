@@ -117,7 +117,7 @@ class CurlSFTP extends CurlDecorator
         foreach (explode(PHP_EOL, $this->getList($dir)) as $item) {
             if (null === $mask) {
                 yield $item;
-            } elseif (preg_match($mask, $item, $matches)) {
+            } elseif (preg_match($mask, $item)) {
                 yield $item;
             }
         }

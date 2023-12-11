@@ -24,6 +24,7 @@
 namespace pavlomr\Service\Tools;
 
 use Closure;
+use Psr\Http\Message\StreamInterface;
 
 final class Utils
 {
@@ -54,6 +55,15 @@ final class Utils
         }
 
         return $res;
+    }
+
+    public static function curlStreamReadFunction(StreamInterface $stream): Closure
+    {
+        return function ($curlHandler, $filePointer, $length) use ($stream) {
+            echo "--------------->$length" . PHP_EOL;
+
+            return $stream->read($length);
+        };
     }
 
 }

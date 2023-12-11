@@ -1,4 +1,10 @@
 {
+  "name": "pavlomr/consumer",
+  "description": "Service consumer",
+  "license": "MIT",
+  "type": "library",
+  "minimum-stability": "RC",
+  "prefer-stable": true,
   "authors": [
     {
       "role": "Author",
@@ -19,22 +25,21 @@
     "guzzlehttp/uri-template": "^1.0",
     "pavlomr/decorator": "^1.0"
   },
-  "name": "pavlomr/consumer",
-  "description": "Service consumer",
-  "license": "MIT",
-  "prefer-stable": true,
   "autoload": {
     "psr-4": {
       "pavlomr\\Service\\": "src/"
     }
   },
-  "type": "library",
+  "autoload-dev": {
+    "psr-4": {
+      "pavlomr\\Service\\Consumer\\Tests\\": "Tests"
+    }
+  },
   "config": {
     "disable-tls": false,
     "optimize-autoloader": true,
     "archive-dir": "archive",
     "preferred-install": "dist",
     "secure-http": true
-  },
-  "minimum-stability": "stable"
+  }
 }

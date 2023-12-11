@@ -24,7 +24,6 @@
 namespace pavlomr\Service\Consumer;
 
 use CurlHandle;
-use pavlomr\Service\SingletonTrait;
 use pavlomr\Service\UserAgentTrait;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -32,20 +31,19 @@ use Psr\Log\LoggerAwareTrait;
 class CurlDecorator implements DecoratorInterface, LoggerAwareInterface
 {
     use LoggerAwareTrait;
-    use SingletonTrait;
     use UserAgentTrait;
 
     public const EXPOSE_INTERNALS = true;
 
-    private string $base;
-    private string $path;
+    protected string   $base;
+    protected string   $path;
     /** @var array<string> */
     private array      $auth    = [];
     private CurlHandle $client;
     private array      $options = [
         CURLOPT_HEADER         => false,
         CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_ENCODING       => 'gzip',
+        CURLOPT_ENCODING => '*',
         CURLOPT_AUTOREFERER    => true,
         CURLOPT_CONNECTTIMEOUT => 120,
         CURLOPT_TIMEOUT        => 120,

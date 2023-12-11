@@ -23,7 +23,6 @@
 
 namespace pavlomr\Service\Consumer;
 
-use pavlomr\Service\SingletonTrait;
 use pavlomr\Service\UserAgentTrait;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -33,15 +32,14 @@ use SoapFault;
 abstract class SOAPDecorator implements DecoratorInterface, LoggerAwareInterface
 {
     use LoggerAwareTrait;
-    use SingletonTrait;
     use UserAgentTrait;
 
     protected const SOAP_VERSION = SOAP_1_2;
     protected const URI          = 'urn:pavlomr:Service:Provider:Abstract';
 
-    private string     $path;
+    protected string $base;
+    protected string $path;
     private array      $auth    = [];
-    private string     $base;
     private SoapClient $client;
     private array      $headers = [
         'Accept' => ['application/soap+xml', 'application/xml', 'text/xml'],
